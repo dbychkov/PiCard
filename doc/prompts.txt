@@ -1,0 +1,89 @@
+#Software analysis prompt
+
+@workspace /explain 
+
+Act as an expert embedded systems engineer and technical writer. I need you to use your agentic capabilities to perform a deep analysis of this workspace and generate a comprehensive documentation file named `Intro.md`. 
+
+Context:
+- Project: Firmware for a ZX Spectrum NemoBus compatible extension card.
+- Language: C.
+- Hardware: WeAct Studio RP2350B module (Raspberry Pi Silicon).
+- Function: Interfaces with the ZX Spectrum bus to emulate various legacy hardware peripherals.
+- Emulated Devices Supported: General Sound (GS), Turbo Sound, DivMMC, Z-Controller, keyboard, and joystick.
+
+Your Task:
+1. Scan the repository to understand the project structure, register mappings, PIO (Programmable I/O) configurations, and multi-core usage on the RP2350.
+2. Create an `Intro.md` file with the following structure:
+
+## High-Level Overview
+- A punchy summary of the project.
+- Hardware architecture (how the RP2350B interacts with the NemoBus).
+- Codebase map (key folders and what they do).
+
+## Emulated Devices Deep Dive
+For each of the following, explain the exact implementation details (e.g., specific PIO state machines used, memory banking techniques, interrupt handling, or timing critical loops):
+- **General Sound (GS) Card** (How the Z80-based sound card and its RAM/ROM banks are emulated).
+- **Turbo Sound** (How the dual AY-3-8910 chips are handled).
+- **DivMMC** (How the SPI interface, SD card, and memory mapping are simulated).
+- **Z-Controller** (How the SD card interface is handled here).
+- **Keyboard & Joystick** (How physical IO ports map to Spectrum input ports).
+
+## Critical Timing & Concurrency
+- Detail how the RP2350's dual cores are utilized.
+- Explain how the firmware meets the strict timing requirements of the ZX Spectrum bus.
+
+Output the entire response as a raw markdown block ready to be saved as `Intro.md`.
+
+
+#Hardware analysis prompt
+
+@workspace Act as an expert hardware and electrical engineer. Now that you have analyzed the firmware code, I need you to perform a deep analysis of the hardware implementation for this "PiCard" project using the provided schematic data from 'ZX_PICARD_V3.pdf'. 
+
+Please generate a new documentation file named `HW_Intro.md`. 
+
+Use your knowledge of the software architecture you just analyzed to enrich this hardware breakdown. Connect how specific C arrays, PIO state machines, or protocols map directly to these physical components.
+
+Please structure the `HW_Intro.md` file as follows:
+
+## Hardware Architecture Overview
+- A high-level description of the PiCard hardware design.
+- Explain how the WeAct RP2350B module functions as the central "brain" and how its massive GPIO array is distributed.
+
+## Key Component Breakdown
+Analyze the role of these specific ICs found in the schematic and cross-reference them with the firmware's emulated devices:
+- **WeAct RP2350B Module:** (Focus on how the Spectrum bus signals, SD cards, and I2S lines map to its GPIOs).
+- **TDA1387T DAC (U4):** (Explain its role in audio output for General Sound/Turbo Sound and the I2S signaling).
+- **PCF8575DBR I/O Expander (U3):** (Analyze its I2C connection to the RP2350B and its role in handling extra legacy I/O like joysticks or keyboards).
+- **74HC245 Transceiver (U1) & 74HC04 Inverters (U2):** (Explain how they handle level shifting and bus buffering between the 5V Spectrum NemoBus and the 3.3V RP2350B).
+- **MCP602 Op-Amps (U5A/B/C):** (Detail the analog audio filtering and amplification stage).
+
+## ZX Spectrum NemoBus Interfacing
+- Detail how the board safely handles the strict 5V edge connector environment of the ZX Spectrum.
+- Identify the critical control signals connected to the RP2350B (like M1/, IORQ/, RD/, WR/, and address lines).
+
+## Physical I/O and Connectivity
+- **Audio Out:** The PJ325 jack and its path from the TDA1387T.
+- **SD Cards:** The dual card setup (Micro_SD_Card and J7Conn_SD0).
+- **Joystick & Keyboard:** The J10 (JOY-1) and J6 (Mini-DIN-6) ports.
+
+Output the entire response as a raw markdown block ready to be saved as `HW_Intro.md`.
+
+
+#Updated Software Prompt:
+
+@workspace Act as a senior embedded systems architect with deep expertise in ZX Spectrum retro-hardware and RP2350 system-on-chip design. 
+
+Now that you have analyzed both the firmware codebase and the physical hardware schematic (`ZX_PICARD_V3.pdf`), let's synthesize this knowledge. I need you to re-evaluate and rewrite the original `Intro.md` file to merge these two domains.
+
+Please perform the following tasks:
+
+1. **Synthesize HW and SW:** Update the "Emulated Devices Deep Dive" sections in `Intro.md`. Explicitly reference the physical hardware discovered in the schematic. (e.g., Connect the General Sound emulation to the I2S signaling sent to the TDA1387T DAC, or map the keyboard/joystick emulation directly to the PCF8575 I2C I/O expander).
+
+2. **Identify Weaknesses & Potential Bugs:** Add a brand-new major section at the bottom titled `## Potential Weaknesses, Bugs, and Bottlenecks`. Brainstorm realistic hardware/software edge cases based on this specific architecture, such as:
+   - **I2C Latency:** Using an I2C expander (PCF8575) for real-time legacy joystick and keyboard reading might be too slow for strict Z80 bus timing. How could this fail, and what are the symptoms?
+   - **Bus Contention & Level Shifting:** Potential race conditions between the RP2350 PIO state machines and the 74HC245 transceivers when dealing with the Z80's fast M1 cycles or I/O read/write strobes.
+   - **DMA and Audio Underruns:** Potential dropouts in the I2S audio stream to the TDA1387T DAC when Core 0 or Core 1 is heavily blocked by mass storage operations on the SD cards.
+
+3. **Suggest Improvements:** Provide concrete, actionable engineering solutions for each weakness identified above (e.g., suggesting PIO IRQ handling, DMA chaining for audio, or moving to assembly for critical loops).
+
+Output the entire, updated response as a raw markdown block ready to be saved as `Intro2.md`.
