@@ -53,3 +53,8 @@ dkms.conf
 
 # debug information files
 *.dwo
+PiCard.my.code-workspace
+
+
+#DB: my excludes...
+build/
